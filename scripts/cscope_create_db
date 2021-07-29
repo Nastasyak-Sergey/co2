@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Author: Sam Protsenko (x0178546)
+
+cscope_db_dir=.cscope
+
+echo "Listing files..."
+
+#find $PWD -name "*.[chxsS]" > cscope.files
+find . -name "*.c" -o -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.x" -o -name "*.s" -o -name "*.S" -o -name "Makefile" -o -name "makefile" -o -name "*.mk" -o -name "*.sh"  > cscope.files
+
+echo "Creating cscope DB..."
+#/usr/bin/cscope -b -q -k
+/usr/bin/cscope -q -R -b -i cscope.files
+
+echo "Moving in $cscope_db_dir ..."
+rm -f cscope.files
+rm -rf $cscope_db_dir
+mkdir $cscope_db_dir
+mv cscope.* $cscope_db_dir
+
+echo "Done"
+
+exit 0
+

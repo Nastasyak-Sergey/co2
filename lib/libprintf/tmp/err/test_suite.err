@@ -1,0 +1,28 @@
+In file included from test/test_suite.cpp:41:0:
+test/../printf.c: In function ‘size_t test::_ftoa(test::out_fct_type, char*, size_t, size_t, double, unsigned int, unsigned int, unsigned int)’:
+test/../printf.c:349:16: warning: comparing floating point with == or != is unsafe [-Wfloat-equal]
+   if (value != value)
+                ^~~~~
+test/../printf.c: In function ‘size_t test::_etoa(test::out_fct_type, char*, size_t, size_t, double, unsigned int, unsigned int, unsigned int)’:
+test/../printf.c:470:17: warning: comparing floating point with == or != is unsafe [-Wfloat-equal]
+   if ((value != value) || (value > DBL_MAX) || (value < -DBL_MAX)) {
+                 ^~~~~
+test/../printf.c:564:61: warning: conversion to ‘long unsigned int’ from ‘int’ may change the sign of the result [-Wsign-conversion]
+     idx = _ntoa_long(out, buffer, idx, maxlen, (expval < 0) ? -expval : expval, expval < 0, 10, 0, minwidth-1, FLAGS_ZEROPAD | FLAGS_PLUS);
+                                                ~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~
+test/test_suite.cpp: In function ‘void ____C_A_T_C_H____T_E_S_T____48()’:
+test/test_suite.cpp:1088:33: warning: implicit conversion from ‘float’ to ‘double’ when passing argument to function [-Wdouble-promotion]
+   test::sprintf(buffer, "%-8f", -INFINITY);
+                                 ^
+test/test_suite.cpp:1220:37: warning: implicit conversion from ‘float’ to ‘double’ when passing argument to function [-Wdouble-promotion]
+     test::sprintf(buffer, "%.5f", i / 10000);
+                                   ~~^~~~~~~
+test/test_suite.cpp:1231:27: warning: implicit conversion from ‘float’ to ‘double’ to match other operand of binary expression [-Wdouble-promotion]
+   for (float i = -1e20; i < 1e20; i += 1e15) {
+                         ~~^~~~~~
+test/test_suite.cpp:1231:37: warning: implicit conversion from ‘float’ to ‘double’ to match other operand of binary expression [-Wdouble-promotion]
+   for (float i = -1e20; i < 1e20; i += 1e15) {
+                                   ~~^~~~~~~
+test/test_suite.cpp:1232:36: warning: implicit conversion from ‘float’ to ‘double’ when passing argument to function [-Wdouble-promotion]
+     test::sprintf(buffer, "%.5f", i);
+                                    ^
