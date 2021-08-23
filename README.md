@@ -1,3 +1,4 @@
+
 # co2
 STM32 CO2 tester
 
@@ -17,3 +18,11 @@ What planed to do;
 - comunication throug USB CDC (libopencm3) insteade  of debug msg throug openocd;
 - add logging of co2 msg in microcontroller flash (+wear leveling); 
 - add new functions to pyQt5 GUI;
+
+GUI
+
+![alt text](https://github.com/Nastasyak-Sergey/co2/blob/master/pyQt5_Gui.png?raw=true)
+
+Assembled PCB
+
+![alt text](https://github.com/Nastasyak-Sergey/co2/blob/master/IMG_0822%2B.jpg?raw=true)
