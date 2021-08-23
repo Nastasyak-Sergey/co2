@@ -19,6 +19,9 @@ What planed to do;
 - add logging of co2 msg in microcontroller flash (+wear leveling); 
 - add new functions to pyQt5 GUI;
 
+
+Current results 
+
 GUI
 
 ![alt text](https://github.com/Nastasyak-Sergey/co2/blob/master/pyQt5_Gui.png?raw=true)
