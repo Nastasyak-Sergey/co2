@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import sys, serial, serial.tools.list_ports, time, threading
+import sys, serial, serial.tools.list_ports, time, threading, struct
+from random import randint
 from datetime import datetime
 
 try:
@@ -9,18 +10,29 @@ try:
 except:
     import queue as Queue
 
+from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QTextCursor
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QAction, QWidget,
     qApp, QPushButton, QDesktopWidget, QHBoxLayout, QVBoxLayout, QLabel, QLineEdit, QTextEdit, QCheckBox, QComboBox )
 
+import pyqtgraph as pg
 
-import pyqtgraph as pg 
 
+# Request value of the CO2 and status information from Sensair S8 sensor
+# Master Transmit:
+#   <FE> <04> <00> <00> <00> <04> <E5> <C6>
+# Slave Reply:
+#   <FE> <04> <08> <00> <00> <00> <00> <00> <00> <01> <90> <16> <E6>
+#                       | Status  |     |   CO2    | CRC |
+
+co2 = 455
+
+DISPLAY_UPDATE = 1000
 
 # Globals
-WIN_WITH, WIN_HEIGHT = 684, 400     # Window size
-SER_TIMEOUT = 0.5                   # Time out for serial RX
+WIN_WITH, WIN_HEIGHT = 684, 600     # Window size
+SER_TIMEOUT = 1.0                   # Time out for serial RX
 RETURN_CHAR = "\n"                  # Char to be sent when Enter key pressed
 PASTE_CHAR = "\x16"                 # Ctrl code for clipboard paste
 baudrate = 9600                     # Default boudrate
@@ -83,20 +95,24 @@ class myWindow(QMainWindow):
         self.central_widget = QWidget()               # define central widget
         self.setCentralWidget(self.central_widget)    # set QMainWindow.centralWidget
 
+        #self.plot = pg.PlotWidget()
+        self.plot = pg.PlotWidget(axisItems={'bottom': pg.DateAxisItem()}) # Create a plot with a date-time axis (timestamps on x-axis)
 
-        hour = [1,2,3,4,5,6,7,8,9,10]
-        temperature = [430,432,434,432,433,431,529,432,535,545]
+        self.plot.showGrid(x=True, y=True) # show the grids  on the graph
 
-        self.plot = pg.PlotWidget()
         self.plot.setFixedHeight(200)
         self.plot.setBackground('w')
-        #pen = pg.mkPen(color=(255, 0, 0)
-        pen = pg.mkPen(color=(255, 0, 0), width=5, style=Qt.DashLine)
-        self.plot.plot(hour, temperature, pen=pen)
+        pen = pg.mkPen(color=(255, 0, 0), width=2, style=Qt.DashLine)
+
+
+        self.x = [time.time() for _ in range(200)]  # 100 data points
+        self.y = [co2 for _ in range(200)]  # 100 data points
+
+
+        self.data_line =  self.plot.plot(self.x, self.y, pen=pen)
         styles = {'color':'r', 'font-size':'14px'}
         self.plot.setLabel('left', 'CO ppm (°co2)', **styles)
         self.plot.setLabel('bottom', 'Time (t)', **styles)
-
 
         # Action definition
         exitAction = QAction(QIcon('exit.png'), '&Exit', self)
@@ -141,10 +157,10 @@ class myWindow(QMainWindow):
         getTimeButton = QPushButton("Get time", self)
         currentTimeL = QLabel("Current time")
         self.currentTime = QLineEdit()
-        self.currentTime.setFixedWidth(80)
+        self.currentTime.setFixedWidth(100)
         targetTimeL = QLabel("Target time")
         self.targretTime = QLineEdit()
-        self.targretTime.setFixedWidth(80)
+        self.targretTime.setFixedWidth(100)
 
         self.terminal = MyTextBox(self)
         self.terminal.setFixedHeight(230)
@@ -174,10 +190,10 @@ class myWindow(QMainWindow):
         hbox = QHBoxLayout()
         hbox.addLayout(vbox)
         hbox.addLayout(vbox1)
-        
+
         hbox1 = QHBoxLayout()
         hbox1.addWidget(self.plot)
- 
+
         vbox2 = QVBoxLayout()
         vbox2.addLayout(hbox)
         vbox2.addLayout(hbox1)
@@ -196,8 +212,22 @@ class myWindow(QMainWindow):
         # Geometry and position
         self.setGeometry(300, 300, 350, 300)
         self.center()
-        self.setWindowTitle('Logger control pannel')
+        self.setWindowTitle('CO2 gas sensor pannel')
         self.show()
+
+        #Update timer section
+        self.timer = QtCore.QTimer()
+        self.timer.setInterval(DISPLAY_UPDATE)
+        self.timer.timeout.connect(self.update_plot_data)
+        self.timer.start()
+
+    def update_plot_data(self):
+        self.x = self.x[1:]             # Remove the first y element.
+        self.x.append(time.time())      # Add a new time value
+        self.y = self.y[1:]             # Remove the first
+        self.y.append( co2 )            # Add a new CO2 value.
+        self.data_line.setData(self.x, self.y)  # Update the data.
+
 
     def center(self):
         qr = self.frameGeometry()
@@ -281,11 +311,12 @@ class SerialThread(QThread):
         display(s)
 
     def run(self):                          # Run serial reader thread
+        global co2
         print("Opening %s at %u baud\n %s\n" % (self.portname, self.baudrate,
               "(hex display)" if hexmode else ""))
         try:
-            self.ser = serial.Serial(self.portname, self.baudrate, timeout=SER_TIMEOUT)
-            time.sleep(SER_TIMEOUT*1.2)
+            self.ser = serial.Serial(self.portname, self.baudrate, timeout=SER_TIMEOUT * 0.5)
+            time.sleep(SER_TIMEOUT)
             self.ser.flushInput()
         except:
             self.ser = None
@@ -293,9 +324,15 @@ class SerialThread(QThread):
             print("Can't open port")
             self.running = False
         while self.running:
-            s = self.ser.read(self.ser.in_waiting or 1)
+            self.ser.read_until('\xFE') # wait until startof the sensore reply msg
+            s = self.ser.read(13)       # sensor reply message specific length
+            # s = self.ser.read(self.ser.in_waiting or 1)
             if s:                                       # Get data from serial port
+                addr, register, length, status, hz, hz2, co2,  checksum = (struct.unpack('>ccHHHcHH', s))
                 self.ser_in(bytes_str(s))               # ..and convert to string
+               # sys.stdout.write('response: co2: ' + str(hex(co2)) + ' crc: ' + str(hex(checksum)) + '\n')
+                sys.stdout.write('response: co2: ' + str(co2) + '\n')
+
             if not self.txq.empty():
                 txd = str(self.txq.get())               # If Tx data in queue, write to serial port
                 self.ser.write(str_bytes(txd))
